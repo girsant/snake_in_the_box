@@ -4,6 +4,7 @@
 #include <bits/stdc++.h>
 #include <stddef.h>
 #include <vector>
+#include <unordered_set>
 #include "def.h"
 using namespace std;
 
@@ -19,7 +20,8 @@ string viz_bin[SNAKE_DIMENSION];    // vetor com todos os vértices vizinhos de 
                                     // fmt string binário. Também é utilizado pela função vizinhos_spa que além de colocar
                                     // todos os vizinhos de um determinado vértice em viz_bin, coloca nos vizinhos que estão 
                                     // indisponíveis em  vert_bin (marcados com "-1") o mesmo valor "-1" no correspondente
-                                    // vizinho. 
+                                    // vizinho.
+
 
 vector <string> vert_comp;          // vetor com todos os vértices da componente conexa alcançáveis e disponíveis no espaço
                                     // de busca vert_bin, a partir da cabeça da snake em questão. O tamanho de vert_comp,
@@ -58,7 +60,11 @@ void listbin(string tipo, vector <string> vert) {
     int vertex;
     for (int i=0; i < vert.size(); i++)
     {
-        vertex = bin2int(vert[i]);
+        if (vert[i] == "-1")
+            vertex = -1;
+        else
+            vertex = bin2int(vert[i]);
+
         if (i == vert.size()-1)
             cout<<vertex;
         else
@@ -184,60 +190,82 @@ int vizinhos_spa(string v){
     return qtd_viz;
 }
 
+int viz_viz_spa(string v){
+    int qtd_viz_viz= 0;
+    string vx;
+    for (int i=0; i < SNAKE_DIMENSION; i++)
+    {
+        vx = v;     
+        if  (vx[i] == '0')        // modifica um char de cada vez
+            vx[i] = '1';          // se '0' troca para '1'
+        else
+            vx[i] = '0';          // se '1' troca para '0'
+
+        // converte vértice atual vert_bin[i] para (fmt int) x
+        int zin = bin2int(vx); 
+        // verifica se vértice do vizinho atual está em posição proibida
+        if ( vert_bin[zin] != "-1")              
+            qtd_viz_viz += 1;   
+    }
+    return qtd_viz_viz;
+}
+
+
+
 // Função que retorna o tamanho do vetor vert_comp que
 // representa a quantidade de vértices alcançáveis a partir do
 // vértice vorig que é o vértice da cabeça da snake sendo
 // processada. Além disso esta função calcula também a quantidade de 
 // vértices de pele (skin nodes) e coloca o resultado na variável
 // global new_skin_fit.
-int find_alcance(string vorig)
+int find_alcance(std::string vorig)
 {
-new_skin_fit = 0;
-vert_comp.clear();
-vert_comp.push_back(vorig);
-int qtd_viz;
+    int qtd_viz_viz;            // quantidade de vértices vizinhos do vizinho sendo processado
+    int delta_skin_fit;         // incremento de vértices (nodes) de skin de um vértice alcançável
+    std::string vx;             // variável auxiliar para armazenar o vértice sendo processado (corrente)
+    new_skin_fit = 0;           // variável onde se calcula a quantidade total de vértices de skin 
+    vert_comp.clear();          // vetor global cujo tamanho final representa a medida de fitness
+    vert_comp.push_back(vorig); // começa com vértices alcançáveis pela cabeça dasnake
 
-for (int k=0; k < vert_comp.size(); k++)
-{
-// coloca em viz_bin vértices vizinhos alcançáveis de vert_comp[k]
-// coloca em qtd_viz a qtd de vértices vizinhos alcançáveis   "" 
-    qtd_viz = vizinhos_spa(vert_comp[k]); 
+    // Cria um unordered set (vazio) para checar se vértice já foi incluido em vert_comp
+    std::unordered_set<std::string> visit_vert_comp;
+    visit_vert_comp.insert(vorig);
 
-// elimina vértices atingiveis q tem 0 vizinhos atingíveis
-    if (qtd_viz == 0)                     
-        {
-        new_skin_fit = new_skin_fit + SNAKE_DIMENSION; 
-        continue;
-        }
-    
-    for (int i = 0; i < SNAKE_DIMENSION; i++)
+    // Cria um unordered set (vazio) para checar se vértice já foi incluido no cálculo do skin_fit
+    std::unordered_set<std::string> visit_skin_fit;
+
+    for (int k = 0; k < vert_comp.size(); k++)  // loop enquanto houverem vértices alcançáveis
     {
-        if (viz_bin[i] == "-1")
-            continue;
-    
-        int javis = 0;
-        for (int j=0; j < vert_comp.size(); j++)
+            vizinhos_spa(vert_comp[k]);  // acha os vizinhos de cabeça ou de qq outro vértice alcançável
+
+            for (int i = 0; i < SNAKE_DIMENSION; i++)   // loop para processar os vizinhos de vert_comp[k]
             {
-                if (viz_bin[i] == vert_comp[j])
-                    {
-                        javis = 1;
-                        break;
-                    }
-            }
-        
-        if (javis == 0)
-            {   
-        // com exceção daqueles da cabeça da snake corrente (vorig)
-        // acumula em skin_fit os vértices não alcançáveis de vert_comp[k]
-        // coloca vértice no vetor de vértices atingíveis 
-            if (viz_bin[i] != vorig)                                       
-                new_skin_fit = new_skin_fit + (SNAKE_DIMENSION - qtd_viz); 
-            vert_comp.push_back(viz_bin[i]);                                
+                if (viz_bin[i] == "-1") continue;  // se vizinho  é  inalcançável -> avança para o próximo
+
+                vx = viz_bin[i];                   // processa o próximo alcançável 
+
+                if (visit_skin_fit.find(vx) == visit_skin_fit.end()) // se alcançável e ainda não contribuiu 
+                {
+                    qtd_viz_viz = viz_viz_spa(vx);                      // vamos incluí-lo no 
+                    delta_skin_fit = SNAKE_DIMENSION - qtd_viz_viz;     // calculo dos  vértices de skin
+                    new_skin_fit += delta_skin_fit;                     // e soma a new_skin_fit
+                    visit_skin_fit.insert(vx);                          // marca vértice que já contribuiu para new_skin_fit
+                }
+                
+                // Verifica se vértice alcançável em vx já foi visitado (se já incluído em vert_comp)
+                if (visit_vert_comp.find(vx) == visit_vert_comp.end())
+                {    
+                    if (qtd_viz_viz != 0)               // se vizinho NÃO É UM BLIND NODE (fim de caminho)
+                        {                               // inclui vértice em vert_com  
+                            vert_comp.push_back(vx);    // para aumentar a fitness
+                            visit_vert_comp.insert(vx); // marca como visitado
+                        }   
+                }
             }
     }
-}
-return vert_comp.size();
-}
+
+    return vert_comp.size() - 1;    // retorna a quantidade de vértices alcançáveis (fitness)
+}                                   // e também os vértices de skin na global new_skin_fit                           
 
 // A classe Transition define os objetos que representam as snakes.
 // Cada snake é 1 caminho induzido em 1 grafo da família dos cubos.
@@ -275,9 +303,12 @@ class Transition {
         }
 
         // Sobrepõe o  operador "<" para fins de comparação
-        // Min-heap: classificada em ordem ascendente de fitness
+        // Min-heap: classificada em ordem ascendente de fitness e de skin_fit
         bool operator<(const Transition& other) const {
-            return fitness > other.fitness; 
+            if (fitness != other.fitness) {
+                return fitness > other.fitness;  // Ordem crescente de fitness
+            }
+            return skin_fit > other.skin_fit;    // Ordem crescente de skin_fit se fitness for igual 
         }
 
 // Método transition_sequence ... chamada:  v->transition_sequence() 
@@ -354,7 +385,7 @@ string vorig = vert_bins[vert_bins.size() - 1];
 // A atribuição na chamada coloca  em new_fitness a quantidade de vértices alcançáveis
 // a partir do vértice da cabeça da snake corrente.
 // Coloca na global new_skin_fit = a quantidade de vértices do tipo skin.
-new_fitness = find_alcance(vorig);                                                                                                                                      
+new_fitness = find_alcance(vorig);                                                                                                                                  
 return true;
 }
 };

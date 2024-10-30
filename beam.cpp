@@ -286,7 +286,7 @@ void increase_beam()
 
                     // verifica se vamos trocar o topo por uma snake qq ao acaso     
                     if  ( (irand1 < def_irand1) or 
-                    // ou se vamos trocar o topo por uma snake c/ mesmas fitnesses
+                    // ou se vamos trocar o topo por uma snake c/ mesma fitness e mesma skin_fit
                         ( (irand2 < def_irand2)   and  (new_sequences[j]->fitness == px->fitness and new_sequences[j]->skin_fit == px->skin_fit) )   or
                     // ou se vamos trocar o topo por uma snake com melhor fitness                    
                         (new_sequences[j]->fitness > px->fitness) or
@@ -502,7 +502,7 @@ while (true){
 
 // Rotina para imprimir as 4 primeiras snakes intermediarias de cada ciclo que já estão em beam
     for (int k=0; k<ind_beam; k++)
-        if (k < 4)
+        if (k < 6)
         {
         trans.clear();
         trans = beam[k]->transition_sequence();

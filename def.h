@@ -3,12 +3,12 @@
 #define TXRAND1 2               // PERCENTUAL PARA TROCA DE SNAKES COM QQ
                                 // FITNESS E SKIN_FIT PARA FUGIR DE MÁXIMOS LOCAIS 
 
-#define TXRAND2 90              // PERCENTUAL PARA TROCA DE SNAKES COM             
+#define TXRAND2 20              // PERCENTUAL PARA TROCA DE SNAKES COM             
                                 // MESMA FITNESS E MESMA SKIN_FIT EM
                                 // NEW_BEAM E NEW_SEQUENCES 
 
-#define SIZE_BEAM     4000000     // TAMANHO DO beam 
-#define SIZE_NEW_BEAM 4000000     // TAMANHO DO new_beam
+#define SIZE_BEAM     2500000     // TAMANHO DO beam 
+#define SIZE_NEW_BEAM 2500000    // TAMANHO DO new_beam
 #define DEBUGAR  4
 
 
