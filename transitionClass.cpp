@@ -1,32 +1,19 @@
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <bits/stdc++.h>
-#include <stddef.h>
-#include <vector>
-#include <unordered_set>
-#include "def.h"
-using namespace std;
-
 // Variáveis GLOBAIS 
 const int vertot = VERTOT;          // total de vértices do cubo 
 
-vector <string> vert_bin;           // vetor com todos os vértices do cubo que representa o espaço de busca
-                                    // elementos com string binário com os números dos vértices que estão disponíveis
-                                    // para estender snakes e elementos com string "-1" são vértices não disponíveis
+vector <string> vert_bin;           // vetor com todos os vértices do cubo em fmt string binário
+                                    // vértices com string "-1" são vértices não disponíveis
 
-string viz_bin[SNAKE_DIMENSION];    // vetor com todos os vértices vizinhos de um determinado vértice. É utilizado pela 
-                                    // função vizinhos  que coloca em viz_bin todos os vizinhos de um determinado vértice em
-                                    // fmt string binário. Também é utilizado pela função vizinhos_spa que além de colocar
-                                    // todos os vizinhos de um determinado vértice em viz_bin, coloca nos vizinhos que estão 
-                                    // indisponíveis em  vert_bin (marcados com "-1") o mesmo valor "-1" no correspondente
-                                    // vizinho.
+vector <string> vert_bin_fixo;      // vetor com todos os vértices do cubo usado para 
+                                    // inicializar o vert_bin com todos os vértices disponíveis
 
+string viz_bin[SNAKE_DIMENSION];    // vetor com todos os vértices vizinhos de um determinado vértice. 
 
-vector <string> vert_comp;          // vetor com todos os vértices da componente conexa alcançáveis e disponíveis no espaço
-                                    // de busca vert_bin, a partir da cabeça da snake em questão. O tamanho de vert_comp,
-                                    // chamado de fitness,  é a primeira e mais importante medida de adequação de uma
-                                    // snake para avaliar a sua probabilidade de crescimento.
+vector <string> viz_bin_ind;        // vetor com todos os vértices vizinhos indisponíveis de um determinado vértice 
+                                    // alcançável a partir da cabeça da snake e que não estão na própria snake
+
+vector <string> vert_comp;          // vetor com todos os vértices da componente conexa alcançáveis e disponíveis
+                                    // no hipercubo, a partir da cabeça da snake em questão. 
 
 int snake_length;                   // variável que mantem o tamanho da snake corrente sendo processada
 
@@ -53,43 +40,6 @@ int bin2int(const std::string& vertice) {
     return vint;
 }
 
-// Função que imprime um vetor de vértices em fmt string binário
-// usada somente para fins de debug 
-void listbin(string tipo, vector <string> vert) {
-    cout<<tipo;
-    int vertex;
-    for (int i=0; i < vert.size(); i++)
-    {
-        if (vert[i] == "-1")
-            vertex = -1;
-        else
-            vertex = bin2int(vert[i]);
-
-        if (i == vert.size()-1)
-            cout<<vertex;
-        else
-            cout<<vertex<<", ";
-    }
-    cout<<" ]"<<endl;
-    return;
-}
-
-// Função que imprime um vetor de vértices em fmt inteiro
-// usada somente para fins de debug 
-void listvint(string tipo, vector <int> vert, int vertot) {  
-    cout<<tipo;
-    for (int i=0; i < vertot; i++)
-    {
-    
-        if (i == vertot-1)
-            cout<<vert[i];
-        else
-            cout<<vert[i]<<",";
-    }
-    cout<<" ]\n";
-    return;
-}
-
 // Função que coloca no array viz_bin em fmt string binário,
 // os vizinhos de um vértice string v de entrada
 void vizinhos(string v){
@@ -108,7 +58,7 @@ void vizinhos(string v){
 
 // Função que transforma para fmt string binário os vértices correspondentes 
 // a um vetor de transições trans em fmt inteiro, devolvendo os vértices 
-// no vetor vert_bins 
+// em fmt string binário no vetor vert_bins 
 void trans2vertb(const std::vector<int>& trans) {
 
     vert_bins.clear();
@@ -137,7 +87,7 @@ void ini_vert_bin(vector <string>& vert_bin, int vertot) {
 }
 
 // Função que imprime um vetor de transições em fmt inteiro
-// usada somente para fins de debug 
+// usada somente para fins de debug e na finalização
 string listaTransitions (vector<int> vetrans, string tipo) {
 int no = vetrans.size();
 string texto = "";
@@ -164,11 +114,12 @@ for(int i=0; i < no; i++)
 // o string "-1" quando o vértice do vizinho estiver em 
 // posição indisponível em vert_bin (espaço de busca), e
 // também retorna a quantidade de vizinhos disponíveis do vértice v
-// no espaço de busca.
+// no hipercubo.
 int vizinhos_spa(string v){
-    int qtd_viz = 0;
     string vx;
-    for (int i=0; i < SNAKE_DIMENSION; i++)
+    viz_bin_ind.clear();
+    int qtd_viz = 0;
+    for (int i = 0; i < SNAKE_DIMENSION; i++)
     {
         vx = v;     
         if  (vx[i] == '0')        // modifica um char de cada vez
@@ -179,110 +130,94 @@ int vizinhos_spa(string v){
         // converte vértice atual vert_bin[i] para (fmt int) x
         int zin = bin2int(vx); 
         // verifica se vértice do vizinho atual está em posição proibida
-        if ( vert_bin[zin] == "-1")     
+
+        if ( vert_bin[zin] == "-1")
+            {
+            // se vértice indisponível e não faz parte dos vértices da snake
+            // então é um vértice candidato a ser um nó de pele (skin node)   
+            if (std::count(vert_bins.begin(), vert_bins.end(), vx) == 0)  
+                viz_bin_ind.push_back(vx);                                 
             viz_bin[i] = "-1";
+            }
         else
             {
-            viz_bin[i] = vx;      // guarda vizinho no array viz_bin
-            qtd_viz += 1;
+            viz_bin[i] = vx;   // guarda vizinho alcançável no array viz_bin
+            qtd_viz += 1;      // conta vizinhos alcançáveis em qtd_viz
             }
     }
     return qtd_viz;
 }
 
-int viz_viz_spa(string v){
-    int qtd_viz_viz= 0;
-    string vx;
-    for (int i=0; i < SNAKE_DIMENSION; i++)
-    {
-        vx = v;     
-        if  (vx[i] == '0')        // modifica um char de cada vez
-            vx[i] = '1';          // se '0' troca para '1'
-        else
-            vx[i] = '0';          // se '1' troca para '0'
-
-        // converte vértice atual vert_bin[i] para (fmt int) x
-        int zin = bin2int(vx); 
-        // verifica se vértice do vizinho atual está em posição proibida
-        if ( vert_bin[zin] != "-1")              
-            qtd_viz_viz += 1;   
-    }
-    return qtd_viz_viz;
-}
-
-
-
-// Função que retorna o tamanho do vetor vert_comp que
-// representa a quantidade de vértices alcançáveis a partir do
-// vértice vorig que é o vértice da cabeça da snake sendo
-// processada. Além disso esta função calcula também a quantidade de 
-// vértices de pele (skin nodes) e coloca o resultado na variável
-// global new_skin_fit.
+// Função retorna o tamanho do vetor vert_comp que representa a qtd
+// de vértices alcançáveis a partir de vorig que é o vértice da cabeça 
+// da snake sendo processada. Calcula também a qtd de vértices de pele 
+// (skin nodes) e coloca o resultado na variável global new_skin_fit.
 int find_alcance(std::string vorig)
 {
-    int qtd_viz_viz;            // quantidade de vértices vizinhos do vizinho sendo processado
-    int delta_skin_fit;         // incremento de vértices (nodes) de skin de um vértice alcançável
-    std::string vx;             // variável auxiliar para armazenar o vértice sendo processado (corrente)
-    new_skin_fit = 0;           // variável onde se calcula a quantidade total de vértices de skin 
-    vert_comp.clear();          // vetor global cujo tamanho final representa a medida de fitness
-    vert_comp.push_back(vorig); // começa com vértices alcançáveis pela cabeça dasnake
-
-    // Cria um unordered set (vazio) para checar se vértice já foi incluido em vert_comp
+    int qtd_viz;  // qtd vértices vizinhos do vértice sendo processado
+    int ac_viz_zero = 0;         // contador de vértices Dead End Nodes
+    new_skin_fit = 0; // global onde se calcula a qtd total de vértices skin
+    vert_comp.clear();          // global (tamanho final é a medida de fitness
+    vert_comp.push_back(vorig); // inicializa com vértice cabeça da snake
+    // Cria um unordered set (vazio) p/checar se vértice já está em vert_comp
     std::unordered_set<std::string> visit_vert_comp;
     visit_vert_comp.insert(vorig);
-
-    // Cria um unordered set (vazio) para checar se vértice já foi incluido no cálculo do skin_fit
+    // Cria um unordered set (vazio) p/checar se vértice já computado em skin_fit
     std::unordered_set<std::string> visit_skin_fit;
-
-    for (int k = 0; k < vert_comp.size(); k++)  // loop enquanto houverem vértices alcançáveis
-    {
-            vizinhos_spa(vert_comp[k]);  // acha os vizinhos de cabeça ou de qq outro vértice alcançável
-
-            for (int i = 0; i < SNAKE_DIMENSION; i++)   // loop para processar os vizinhos de vert_comp[k]
-            {
-                if (viz_bin[i] == "-1") continue;  // se vizinho  é  inalcançável -> avança para o próximo
-
-                vx = viz_bin[i];                   // processa o próximo alcançável 
-
-                if (visit_skin_fit.find(vx) == visit_skin_fit.end()) // se alcançável e ainda não contribuiu 
-                {
-                    qtd_viz_viz = viz_viz_spa(vx);                      // vamos incluí-lo no 
-                    delta_skin_fit = SNAKE_DIMENSION - qtd_viz_viz;     // calculo dos  vértices de skin
-                    new_skin_fit += delta_skin_fit;                     // e soma a new_skin_fit
-                    visit_skin_fit.insert(vx);                          // marca vértice que já contribuiu para new_skin_fit
-                }
-                
-                // Verifica se vértice alcançável em vx já foi visitado (se já incluído em vert_comp)
-                if (visit_vert_comp.find(vx) == visit_vert_comp.end())
-                {    
-                    if (qtd_viz_viz != 0)               // se vizinho NÃO É UM BLIND NODE (fim de caminho)
-                        {                               // inclui vértice em vert_com  
-                            vert_comp.push_back(vx);    // para aumentar a fitness
-                            visit_vert_comp.insert(vx); // marca como visitado
-                        }   
-                }
+    // LOOP PRINCIPAL - enquanto houverem vértices alcançáveis
+    for (int k = 0; k < vert_comp.size(); k++) 
+    {   // Processando vert_comp[k]
+        // acha vizinhos da cabeça ou de qq outro vértice alcançável
+        qtd_viz = vizinhos_spa(vert_comp[k]); 
+        // Rotina para apurar a fitness
+        // loop para processar os vizinhos de vert_comp[k]
+        for (int i = 0; i < SNAKE_DIMENSION; i++) 
+        {   // verifica se viz_bin[i] é um  Dead End Node e não conta para fitness
+            if (qtd_viz == 0)       
+                {   ac_viz_zero += 1;  // contador de vértices Dead End Nodes
+                    break; }
+            if (viz_bin[i] == "-1")
+                continue; // se vizinho  é  inalcançável -> avança para o próximo
+            // Verifica se vértice alcançável em viz_bin[i] já foi visitado 
+            if (visit_vert_comp.find(viz_bin[i]) == visit_vert_comp.end()) 
+            {   // se viz_bin[i] não está em vert_comp[]
+                vert_comp.push_back(viz_bin[i]);    // insere viz_bin[i] em vert_comp[]
+                visit_vert_comp.insert(viz_bin[i]); // marca como visitado
             }
-    }
+        }
+        // Rotina para apurar a new_skin_fit
+        for (int j = 0; j < viz_bin_ind.size(); j++)
+        {   if (vert_comp[k] == vorig)
+                break;       
+            // verifica se viz_bin_ind[j] ainda não foi visitado e computado como nó de pele
+            if (visit_skin_fit.find(viz_bin_ind[j]) == visit_skin_fit.end())   
+            {   new_skin_fit += 1; // se ainda não visitado soma 1 a skin_fit
+                visit_skin_fit.insert(viz_bin_ind[j]);} // marca viz_bin_ind[j] como visitado    
+        }  
+    }       // FIM DO LOOP PRINCIPAL         
 
-    return vert_comp.size() - 1;    // retorna a quantidade de vértices alcançáveis (fitness)
-}                                   // e também os vértices de skin na global new_skin_fit                           
+    // PREPARA PARA RETORNO   
+        // Cálculo do fitness: se tamano_fitness for negativo retorna ZERO
+        int tamanho_fitness =  vert_comp.size() - 1 - ac_viz_zero;
+        if (tamanho_fitness < 0)
+            tamanho_fitness = 0;    // Garante que o valor não seja negativo
+        return tamanho_fitness;  // Retorna o valor de fitness ou 0, caso seja negativo
+        // retorna a quantidade de vértices alcançáveis (fitness)
+        // menos a cabeça da snake e menos os vértices DEAD END NODES
+}       // e também os vértices de skin na global new_skin_fit 
+                     
 
 // A classe Transition define os objetos que representam as snakes.
-// Cada snake é 1 caminho induzido em 1 grafo da família dos cubos.
-// A primeira forma de representação das snakes poderia ser a
-// sequência de seus vértices, expressos na base 10 ou na base 2. 
+// Cada snake é um caminho induzido num grafo da família dos cubos.
 // Para compactar a representação das snakes encontradas, usa-se
 // comumente, representar as snakes com a notação da sequência das transições
-// dos vértices expressos na base 2. As transicoes são expressas
-// na base 10. Vamos exemplificar, num cubo de dim 3 a snake de tamanho 3:
-// Vertices em base 2:    snake_vertices   =  ["000", "001", "011", "111"]
-// Transições na base 10: snake_transitions = [         "0",  "1",  "2"  ]
+// dos vértices expressos na base 2. As transicoes são expressas na base 10. 
 // A estrutura de dados escolhida para as snakes é uma lista encadeada
-// de objetos da Classe Transition, representando uma arvore especial
-// (grafo caminho) que contém somente vértices de grau 2 e 1.
-// Em particular, essa árvore tem dois vértices terminais que tem grau 1,
-// enquanto todos os outros têm grau 2. Cada  objeto Transition aponta
-// somente para o seu objeto pai (father).
+// de objetos da Classe Transition, representado uma arvore especial
+// Cada snake é um caminho da árvore. Em particular, todos os caminhos nessa
+// árvore tem a mesma origem comum no vértice 0 e têm dois vértices terminais
+// que tem grau 1, enquanto todos os outros vértices internos têm grau 2. 
+// Cada  objeto Transition aponta para o seu objeto pai (father).
 
 class Transition {
     public:
@@ -350,11 +285,9 @@ trans.push_back(transx);
 // em  vetor de vértices em fmt string binário
 trans2vertb(trans);
 
-// esvazia vector <string> vert_bin e chama ini_vert_bin para 
 // colocar em  vector <string> vert_bin a lista de todos os vértices
 // do cubo em fmt binario
-vert_bin.clear();                    
-ini_vert_bin(vert_bin, vertot);       
+vert_bin = vert_bin_fixo;      
 
 for (int i = 1; i < vert_bins.size(); i++)
 {
@@ -376,8 +309,11 @@ for (int i = 1; i < vert_bins.size(); i++)
     }                                                   
 }
 // atualiza snake_length para o novo tamanho da snake corrente
-snake_length = trans.size();                            
+snake_length = trans.size();   
 
+// Só usar estas instruções ao substituir a find_alcance com a find_alcance_debug
+/*    if (snake_length > 3)
+        listaTransitions(trans, ""); */
 // coloca em  vorig o vértice da cabeça da snake corrente
 string vorig = vert_bins[vert_bins.size() - 1];
 
@@ -388,8 +324,6 @@ string vorig = vert_bins[vert_bins.size() - 1];
 new_fitness = find_alcance(vorig);                                                                                                                                  
 return true;
 }
-};
-
-
+};  // FIM DA CLASSE Transition
 
 
