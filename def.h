@@ -1,5 +1,5 @@
 // PARÂMETROS QUE PODEM SER ALTERADOS A CADA PROCESSAMENTO
-#define SNAKE_DIMENSION 8
+#define SNAKE_DIMENSION 7
 #define TXRAND1 2               // PERCENTUAL PARA TROCA DE SNAKES COM QQ
                                 // FITNESS E SKIN_FIT PARA FUGIR DE MÁXIMOS LOCAIS 
 
@@ -7,10 +7,9 @@
                                 // MESMA FITNESS E MESMA SKIN_FIT EM
                                 // NEW_BEAM E NEW_SEQUENCES 
 
-#define SIZE_BEAM     2500000     // TAMANHO DO beam 
-#define SIZE_NEW_BEAM 2500000    // TAMANHO DO new_beam
+#define SIZE_BEAM     5000     // TAMANHO DO beam 
+#define SIZE_NEW_BEAM 5000    // TAMANHO DO new_beam
 #define DEBUGAR  4
-
 
 // PARÂMETROS PARA NÃO SEREM ALTERADOS A CADA PROCESSAMENTO
 #define TWO_TO_THE_N (1 << SNAKE_DIMENSION) // CALCULA O NÚMERO DE VÉRTICES DO CUBO 
